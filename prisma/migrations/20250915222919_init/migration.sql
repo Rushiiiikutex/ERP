@@ -14,5 +14,10 @@ CREATE TABLE "public"."User" (
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
 );
 
+CREATE TABLE "public"."Rushi"(
+    "id" SERIAL NOT NULL,
+    "name" TEXT NOT NULL
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "public"."User"("email");

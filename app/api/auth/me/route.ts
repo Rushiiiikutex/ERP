@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { verifyAccessToken } from "../../../../lib/jwt";
-import { prisma } from "../../../../lib/db";
+import { verifyAccessToken } from "../../../../src/lib/jwt";
+import { prisma } from "../../../../src/lib/db";
 
 
 export async function GET() {

@@ -28,7 +28,31 @@ export default function LoginPage() {
       setError(data.error || "Login failed");
       return;
     }
-    router.push(next);
+    
+    // Get user info to determine redirect based on role
+    const userRes = await fetch("/api/auth/me");
+    
+    if (userRes.ok) {
+      const data = await userRes.json();
+      const user = data.user;
+      
+      if (user && user.role) {
+        // Role-based redirects
+        if (user.role === "ADMIN") {
+          window.location.href = "/admin";
+        } else if (user.role === "TEACHER") {
+          window.location.href = "/teacher";
+        } else {
+          window.location.href = "/student";
+        }
+      } else {
+        // Fallback to original next parameter
+        window.location.href = next;
+      }
+    } else {
+      // Fallback to original next parameter
+      window.location.href = next;
+    }
   }
 
   return (
@@ -106,6 +130,18 @@ export default function LoginPage() {
           </form>
           
           <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600 mb-2">Demo credentials:</p>
+            <div className="space-y-1 text-xs">
+              <div>
+                <span className="font-medium text-blue-600">Admin:</span> admin@admin.com / admin123
+              </div>
+              <div>
+                <span className="font-medium text-green-600">Teacher:</span> teacher@teacher.com / password
+              </div>
+              <div>
+                <span className="font-medium text-purple-600">Student:</span> test@test.com / password
+              </div>
+            </div>
           </div>
         </div>
       </div>
