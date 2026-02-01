@@ -1,3 +1,168 @@
+
+
+// generator client {
+//   provider = "prisma-client-js"
+// }
+
+// datasource db {
+//   provider = "postgresql"
+//   url      = env("DATABASE_URL")
+// }
+
+// enum Role {
+//   USER
+//   ADMIN
+//   TEACHER
+// }
+
+// model User {
+//   id        Int      @id @default(autoincrement())
+//   email     String   @unique
+//   name      String?
+//   password  String
+//   role      Role     @default(USER)
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
+
+//   teacher Teacher?
+//   student Student?
+// }
+
+// enum AttendanceStatus {
+//   PRESENT
+//   ABSENT
+//   LATE
+//   EXCUSED
+// }
+
+// model Teacher {
+//   id      Int      @id @default(autoincrement())
+//   userId  Int      @unique
+//   user    User     @relation(fields: [userId], references: [id])
+//   courses Course[]
+// }
+
+// model Student {
+//   id     Int  @id @default(autoincrement())
+//   userId Int  @unique
+//   user   User @relation(fields: [userId], references: [id])
+
+//   rollNo String @unique
+
+//   classId Int   @unique
+//   class   Class @relation(fields: [classId], references: [id])
+
+//   enrollments Enrollment[]
+//   attendance  AttendanceRecord[]
+
+//   // Remove the unique constraint or make fields required
+//   // PostgreSQL allows this but it treats NULL as distinct values
+//   // Better approach: only add constraint when both are NOT NULL
+// }
+
+// model Class {
+//   id              Int              @id @default(autoincrement())
+//   name            String
+//   division        String
+//   ccName          String
+  
+//   students        Student[]
+
+//   @@unique([name, division])
+// }
+
+// // model ClassAssignment {
+// //   id        Int                      @id @default(autoincrement())
+// //   className String
+// //   division  String
+// //   ccName    String
+// //   createdAt DateTime                 @default(now())
+// //   classId   Int                      @unique
+// //   class     Class                    @relation(fields: [classId], references: [id])
+// //   students  ClassAssignmentStudent[]
+// // }
+
+// // model ClassAssignmentStudent {
+// //   id           Int @id @default(autoincrement())
+// //   assignmentId Int
+
+// //   studentName String
+// //   rollNo      String // Changed from Int to String to match Student.rollNo
+// //   batch       String
+
+// //   assignment ClassAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+// // }
+
+// model Course {
+//   id        Int            @id @default(autoincrement())
+//   code      String         @unique
+//   title     String
+//   teacherId Int
+//   teacher   Teacher        @relation(fields: [teacherId], references: [id])
+//   sections  Section[]
+//   sessions  ClassSession[]
+
+//   createdAt DateTime @default(now())
+// }
+
+// model Section {
+//   id       Int            @id @default(autoincrement())
+//   name     String
+//   courseId Int
+//   course   Course         @relation(fields: [courseId], references: [id])
+//   students Enrollment[]
+//   sessions ClassSession[]
+
+//   @@unique([courseId, name])
+// }
+
+// model Enrollment {
+//   id        Int      @id @default(autoincrement())
+//   studentId Int
+//   sectionId Int
+//   student   Student  @relation(fields: [studentId], references: [id])
+//   section   Section  @relation(fields: [sectionId], references: [id])
+//   joinedAt  DateTime @default(now())
+
+//   @@unique([studentId, sectionId])
+// }
+
+// model ClassSession {
+//   id          Int      @id @default(autoincrement())
+//   courseId    Int
+//   sectionId   Int
+//   date        DateTime
+//   topic       String?
+//   isLocked    Boolean  @default(false)
+//   createdById Int
+
+//   course     Course             @relation(fields: [courseId], references: [id])
+//   section    Section            @relation(fields: [sectionId], references: [id])
+//   attendance AttendanceRecord[]
+
+//   @@unique([courseId, sectionId, date])
+//   @@index([date])
+// }
+
+// model AttendanceRecord {
+//   id         Int              @id @default(autoincrement())
+//   sessionId  Int
+//   studentId  Int
+//   status     AttendanceStatus
+//   markedAt   DateTime         @default(now())
+//   markedById Int
+//   note       String?
+
+//   session ClassSession @relation(fields: [sessionId], references: [id])
+//   student Student      @relation(fields: [studentId], references: [id])
+
+//   @@unique([sessionId, studentId])
+//   @@index([studentId])
+//   @@index([sessionId])
+// }
+
+
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -5,7 +170,6 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  directUrl  = env("DIRECT_URL")
 }
 
 enum Role {
@@ -14,12 +178,148 @@ enum Role {
   TEACHER
 }
 
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+
 model User {
-   id        Int      @id @default(autoincrement())
+  id        Int      @id @default(autoincrement())
   email     String   @unique
   name      String?
-  password  String   // bcrypt hash
+  password  String
   role      Role     @default(USER)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  teacher            Teacher?
+  student            Student?
+  createdSessions    ClassSession[]     @relation("SessionCreator")
+  markedAttendance   AttendanceRecord[] @relation("AttendanceMarker")
+
+  @@index([email])
+  @@index([role])
+}
+
+model Teacher {
+  id      Int      @id @default(autoincrement())
+  userId  Int      @unique
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courses Course[]
+
+  @@index([userId])
+}
+
+
+model Student {
+  id     Int  @id @default(autoincrement())
+  userId Int  @unique   
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  rollNo String @unique
+
+  classId Int
+  class   Class @relation(fields: [classId], references: [id])
+
+  enrollments Enrollment[]
+  attendance  AttendanceRecord[]
+
+  @@index([userId])
+  @@index([classId])
+  @@index([rollNo])
+}
+
+
+model Class {
+  id       Int       @id @default(autoincrement())
+  name     String
+  division String
+  ccName   String // Class Coordinator Name
+  students Student[]
+
+  @@unique([name, division])
+  @@index([name])
+}
+
+model Course {
+  id        Int            @id @default(autoincrement())
+  code      String         @unique
+  title     String
+  teacherId Int
+  teacher   Teacher        @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  sections  Section[]
+  sessions  ClassSession[]
+
+  createdAt DateTime @default(now())
+
+  @@index([teacherId])
+  @@index([code])
+}
+
+model Section {
+  id       Int            @id @default(autoincrement())
+  name     String
+  courseId Int
+  course   Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  students Enrollment[]
+  sessions ClassSession[]
+
+  @@unique([courseId, name])
+  @@index([courseId])
+}
+
+model Enrollment {
+  id        Int      @id @default(autoincrement())
+  studentId Int
+  sectionId Int
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  section   Section  @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  joinedAt  DateTime @default(now())
+
+  @@unique([studentId, sectionId])
+  @@index([studentId])
+  @@index([sectionId])
+}
+
+model ClassSession {
+  id          Int      @id @default(autoincrement())
+  courseId    Int
+  sectionId   Int
+  date        DateTime
+  topic       String?
+  isLocked    Boolean  @default(false)
+  createdById Int
+
+  course     Course             @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  section    Section            @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  createdBy  User               @relation("SessionCreator", fields: [createdById], references: [id])
+  attendance AttendanceRecord[]
+
+  @@unique([courseId, sectionId, date])
+  @@index([date])
+  @@index([courseId])
+  @@index([sectionId])
+  @@index([createdById])
+}
+
+model AttendanceRecord {
+  id         Int              @id @default(autoincrement())
+  sessionId  Int
+  studentId  Int
+  status     AttendanceStatus
+  markedAt   DateTime         @default(now())
+  markedById Int
+  note       String?
+
+  session  ClassSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  student  Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  markedBy User         @relation("AttendanceMarker", fields: [markedById], references: [id])
+
+  @@unique([sessionId, studentId])
+  @@index([studentId])
+  @@index([sessionId])
+  @@index([markedById])
+  @@index([status])
 }

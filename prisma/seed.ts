@@ -62,6 +62,10 @@ async function main() {
   console.log('- Teacher User:', teacher.email, 'Role:', teacher.role);
 }
 
+
+
+
+
 main()
   .then(() => prisma.$disconnect())
   .catch(async (e) => {
